@@ -35,6 +35,7 @@ public class WCoreLoader implements IFMLLoadingPlugin {
 
     {
         File loadLocation = new File(new File(new File(Launch.minecraftHome, "W-OVERFLOW"), "W-CORE"), "W-CORE.jar");
+        JsonObject json = null;
         try {
             if (!loadLocation.getParentFile().exists()) loadLocation.getParentFile().mkdirs();
             Supplier<String> supplier = () -> {
@@ -54,7 +55,7 @@ public class WCoreLoader implements IFMLLoadingPlugin {
                 }
                 return "";
             };
-            JsonObject json = new JsonParser().parse(supplier.get()).getAsJsonObject();
+            json = new JsonParser().parse(supplier.get()).getAsJsonObject();
             if (json.has("core")) {
                 boolean devEnv = Launch.classLoader.getClassBytes("net.minecraft.world.World") != null;
                 if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(devEnv ? "checksum_core_dev" : "checksum_core").getAsString()))) {
@@ -78,15 +79,17 @@ public class WCoreLoader implements IFMLLoadingPlugin {
             }
         }
 
-        try {
-            URL fileURL = loadLocation.toURI().toURL();
-            if (!Launch.classLoader.getSources().contains(fileURL)) {
-                Launch.classLoader.addURL(fileURL);
+        if (json != null) {
+            try {
+                URL fileURL = loadLocation.toURI().toURL();
+                if (!Launch.classLoader.getSources().contains(fileURL)) {
+                    Launch.classLoader.addURL(fileURL);
+                }
+                Launch.classLoader.findClass(json.getAsJsonObject("classpath").get("main").getAsString()).getDeclaredMethod("initialize").invoke(null);
+            } catch (Throwable e) {
+                e.printStackTrace();
+                showErrorScreen();
             }
-            Launch.classLoader.findClass("cc.woverflow.wcore.WCore").getDeclaredMethod("initialize").invoke(null);
-        } catch (Throwable e) {
-            e.printStackTrace();
-            showErrorScreen();
         }
     }
 
