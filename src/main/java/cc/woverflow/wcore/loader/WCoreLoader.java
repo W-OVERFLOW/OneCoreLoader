@@ -56,10 +56,11 @@ public class WCoreLoader implements IFMLLoadingPlugin {
             };
             JsonObject json = new JsonParser().parse(supplier.get()).getAsJsonObject();
             if (json.has("core")) {
-                if (!loadLocation.exists() || !getChecksumOfFile(loadLocation.getPath()).equals(json.get("checksum_core").getAsString())) {
+                boolean devEnv = Launch.classLoader.getClassBytes("net.minecraft.world.World") != null;
+                if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(devEnv ? "checksum_core_dev" : "checksum_core").getAsString()))) {
                     System.out.println("Downloading / updating W-CORE...");
                     FileUtils.copyURLToFile(
-                            new URL(json.get("core").getAsString()),
+                            new URL(json.get(devEnv ? "core_dev" : "core").getAsString()),
                             loadLocation,
                             5000,
                             5000);
