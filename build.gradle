@@ -1,30 +1,18 @@
-//file:noinspection GradlePackageUpdate
 plugins {
+    id "net.minecraftforge.gradle.forge" version "6f53277"
     id "java"
 }
 
-version = "1.2.0"
+version = "1.0.0"
 group = "cc.woverflow"
 archivesBaseName = rootProject.name
 
 sourceCompatibility = targetCompatibility = 1.8
 compileJava.options.encoding = 'UTF-8'
 
-repositories {
-    mavenCentral()
-    maven {
-        name = 'Minecraft'
-        url = 'https://libraries.minecraft.net/'
-    }
-    maven {
-        name = 'JitPack'
-        url = 'https://jitpack.io/'
-    }
-}
-
-dependencies {
-    compileOnly ("com.google.code.gson:gson:2.2.3")
-    compileOnly ("net.minecraft:launchwrapper:1.12")
-    compileOnly ("commons-io:commons-io:2.4")
-    compileOnly ("org.apache.httpcomponents:httpclient:4.3.3")
+minecraft {
+    version = "1.8.9-11.15.1.2318-1.8.9"
+    runDir = "run"
+    mappings = "stable_22"
+    makeObfSourceJar = false
 }
