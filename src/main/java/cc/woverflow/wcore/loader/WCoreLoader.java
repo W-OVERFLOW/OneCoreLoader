@@ -22,13 +22,14 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Supplier;
 
 public class WCoreLoader implements IFMLLoadingPlugin {
 
     private final HttpClientBuilder builder =
-            HttpClients.custom().setUserAgent("WCore/1.1.3")
+            HttpClients.custom().setUserAgent("WCore/1.1.5")
                     .addInterceptorFirst((HttpRequestInterceptor) (request, context) -> {
                         if (!request.containsHeader("Pragma")) request.addHeader("Pragma", "no-cache");
                         if (!request.containsHeader("Cache-Control")) request.addHeader("Cache-Control", "no-cache");
@@ -88,9 +89,11 @@ public class WCoreLoader implements IFMLLoadingPlugin {
                 }
                 try {
                     ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
-                    Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-                    method.setAccessible(true);
-                    method.invoke(classLoader, fileURL);
+                    if (!(classLoader instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) classLoader).getURLs()).contains(fileURL)) {
+                        Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                        method.setAccessible(true);
+                        method.invoke(classLoader, fileURL);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
