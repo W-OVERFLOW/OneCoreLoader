@@ -18,6 +18,7 @@ import org.apache.http.util.EntityUtils;
 import javax.swing.*;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -28,7 +29,7 @@ import java.util.function.Supplier;
 public class WCoreLoader implements IFMLLoadingPlugin {
 
     private final HttpClientBuilder builder =
-            HttpClients.custom().setUserAgent("WCore/1.0.0")
+            HttpClients.custom().setUserAgent("WCore/1.1.3")
                     .addInterceptorFirst((HttpRequestInterceptor) (request, context) -> {
                         if (!request.containsHeader("Pragma")) request.addHeader("Pragma", "no-cache");
                         if (!request.containsHeader("Cache-Control")) request.addHeader("Cache-Control", "no-cache");
@@ -61,11 +62,11 @@ public class WCoreLoader implements IFMLLoadingPlugin {
                 boolean devEnv = Launch.classLoader.getClassBytes("net.minecraft.world.World") != null;
                 if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(devEnv ? "checksum_core_dev" : "checksum_core").getAsString()))) {
                     System.out.println("Downloading / updating W-CORE...");
-                    FileUtils.copyURLToFile(
-                            new URL(json.get(devEnv ? "core_dev" : "core").getAsString()),
-                            loadLocation,
-                            5000,
-                            5000);
+                    if (!download(json.get(devEnv ? "core_dev" : "core").getAsString(), loadLocation)) {
+                        if (!loadLocation.exists()) {
+                            showErrorScreen();
+                        }
+                    }
                 }
             } else {
                 // oh
@@ -151,6 +152,24 @@ public class WCoreLoader implements IFMLLoadingPlugin {
                     .substring(1));
         }
         return stringBuffer.toString();
+    }
+
+    private boolean download(String url, File file) {
+        if (file.exists()) return true;
+        url = url.replace(" ", "%20");
+        try (FileOutputStream fileOut = new FileOutputStream(file)) {
+            HttpResponse downloadResponse = builder.build().execute(new HttpGet(url));
+            byte[] buffer = new byte[1024];
+
+            int read;
+            while ((read = downloadResponse.getEntity().getContent().read(buffer)) > 0) {
+                fileOut.write(buffer, 0, read);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
 
     @Override
