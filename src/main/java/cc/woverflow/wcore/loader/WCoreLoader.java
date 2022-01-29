@@ -29,7 +29,7 @@ import java.util.function.Supplier;
 public class WCoreLoader implements IFMLLoadingPlugin {
 
     private final HttpClientBuilder builder =
-            HttpClients.custom().setUserAgent("WCore/1.1.5")
+            HttpClients.custom().setUserAgent("WCore/1.1.6")
                     .addInterceptorFirst((HttpRequestInterceptor) (request, context) -> {
                         if (!request.containsHeader("Pragma")) request.addHeader("Pragma", "no-cache");
                         if (!request.containsHeader("Cache-Control")) request.addHeader("Cache-Control", "no-cache");
@@ -38,6 +38,7 @@ public class WCoreLoader implements IFMLLoadingPlugin {
     {
         File loadLocation = new File(new File(new File(Launch.minecraftHome, "W-OVERFLOW"), "W-CORE"), "W-CORE.jar");
         JsonObject json = null;
+        boolean deobf = ((boolean) Launch.blackboard.getOrDefault("fml.deobfuscatedEnvironment", false));
         try {
             if (!loadLocation.getParentFile().exists()) loadLocation.getParentFile().mkdirs();
             Supplier<String> supplier = () -> {
@@ -59,10 +60,9 @@ public class WCoreLoader implements IFMLLoadingPlugin {
             };
             json = new JsonParser().parse(supplier.get()).getAsJsonObject();
             if (json.has("core")) {
-                boolean devEnv = Launch.classLoader.getClassBytes("net.minecraft.world.World") != null;
-                if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(devEnv ? "checksum_core_dev" : "checksum_core").getAsString()))) {
+                if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
                     System.out.println("Downloading / updating W-CORE...");
-                    if (!download(json.get(devEnv ? "core_dev" : "core").getAsString(), loadLocation)) {
+                    if (!download(json.get(deobf ? "core_dev" : "core").getAsString(), loadLocation)) {
                         if (!loadLocation.exists()) {
                             showErrorScreen();
                         }
@@ -83,19 +83,21 @@ public class WCoreLoader implements IFMLLoadingPlugin {
 
         if (json != null) {
             try {
-                URL fileURL = loadLocation.toURI().toURL();
-                if (!Launch.classLoader.getSources().contains(fileURL)) {
-                    Launch.classLoader.addURL(fileURL);
-                }
-                try {
-                    ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
-                    if (!(classLoader instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) classLoader).getURLs()).contains(fileURL)) {
-                        Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-                        method.setAccessible(true);
-                        method.invoke(classLoader, fileURL);
+                if (!deobf) { //ideally, this wouldn't be needed, but compileOnly doesn't work with forge for some reason.
+                    URL fileURL = loadLocation.toURI().toURL();
+                    if (!Launch.classLoader.getSources().contains(fileURL)) {
+                        Launch.classLoader.addURL(fileURL);
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    try {
+                        ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
+                        if (!(classLoader instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) classLoader).getURLs()).contains(fileURL)) {
+                            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                            method.setAccessible(true);
+                            method.invoke(classLoader, fileURL);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 Launch.classLoader.findClass(json.getAsJsonObject("classpath").get("main").getAsString()).getDeclaredMethod("initialize").invoke(null);
             } catch (Throwable e) {
