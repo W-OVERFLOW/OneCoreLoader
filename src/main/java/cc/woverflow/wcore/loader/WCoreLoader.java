@@ -154,7 +154,6 @@ public class WCoreLoader implements IFMLLoadingPlugin {
     }
 
     private boolean download(String url, File file) {
-        if (file.exists()) return true;
         url = url.replace(" ", "%20");
         try (FileOutputStream fileOut = new FileOutputStream(file)) {
             HttpResponse downloadResponse = builder.build().execute(new HttpGet(url));
