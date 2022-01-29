@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.security.MessageDigest;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -84,6 +85,14 @@ public class WCoreLoader implements IFMLLoadingPlugin {
                 URL fileURL = loadLocation.toURI().toURL();
                 if (!Launch.classLoader.getSources().contains(fileURL)) {
                     Launch.classLoader.addURL(fileURL);
+                }
+                try {
+                    ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
+                    Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                    method.setAccessible(true);
+                    method.invoke(classLoader, fileURL);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
                 Launch.classLoader.findClass(json.getAsJsonObject("classpath").get("main").getAsString()).getDeclaredMethod("initialize").invoke(null);
             } catch (Throwable e) {
