@@ -29,7 +29,7 @@ import java.util.function.Supplier;
 public class WCoreLoader implements IFMLLoadingPlugin {
 
     private final HttpClientBuilder builder =
-            HttpClients.custom().setUserAgent("WCore/1.1.6")
+            HttpClients.custom().setUserAgent("WCore/1.1.7")
                     .addInterceptorFirst((HttpRequestInterceptor) (request, context) -> {
                         if (!request.containsHeader("Pragma")) request.addHeader("Pragma", "no-cache");
                         if (!request.containsHeader("Cache-Control")) request.addHeader("Cache-Control", "no-cache");
@@ -83,11 +83,11 @@ public class WCoreLoader implements IFMLLoadingPlugin {
 
         if (json != null) {
             try {
-                if (!deobf) { //ideally, this wouldn't be needed, but compileOnly doesn't work with forge for some reason.
-                    URL fileURL = loadLocation.toURI().toURL();
-                    if (!Launch.classLoader.getSources().contains(fileURL)) {
-                        Launch.classLoader.addURL(fileURL);
-                    }
+                URL fileURL = loadLocation.toURI().toURL();
+                if (!Launch.classLoader.getSources().contains(fileURL)) {
+                    Launch.classLoader.addURL(fileURL);
+                }
+                if (!deobf) {
                     try {
                         ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
                         if (!(classLoader instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) classLoader).getURLs()).contains(fileURL)) {
