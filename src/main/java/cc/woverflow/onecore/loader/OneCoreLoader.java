@@ -16,7 +16,6 @@ import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.function.Supplier;
 
 public class OneCoreLoader extends EssentialSetupTweaker {
 
@@ -99,21 +98,7 @@ public class OneCoreLoader extends EssentialSetupTweaker {
         boolean deobf = ((boolean) Launch.blackboard.getOrDefault("fml.deobfuscatedEnvironment", false));
         try {
             if (!loadLocation.getParentFile().exists()) loadLocation.getParentFile().mkdirs();
-            Supplier<String> supplier = () -> {
-                try (InputStreamReader input = new InputStreamReader(setupConnection("https://woverflow.cc/static/data/onecore.json"), Charset.defaultCharset())) {
-                    StringBuilderWriter builder = new StringBuilderWriter();
-                    char[] buffer = new char[4096];
-                    int n;
-                    while ((n = input.read(buffer)) > 0) {
-                        builder.write(buffer, 0, n);
-                    }
-                    return builder.toString();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return "ERROR";
-                }
-            };
-            String theJson = supplier.get();
+            String theJson = getJson();
             if (theJson.equals("ERROR")) {
                 if (!loadLocation.exists()) {
                     showErrorScreen();
@@ -197,7 +182,22 @@ public class OneCoreLoader extends EssentialSetupTweaker {
         }
     }
 
-    private InputStream setupConnection(String url) throws IOException {
+    private static String getJson() {
+        try (InputStreamReader input = new InputStreamReader(setupConnection("https://woverflow.cc/static/data/onecore.json"), Charset.defaultCharset())) {
+            StringBuilderWriter builder = new StringBuilderWriter();
+            char[] buffer = new char[4096];
+            int n;
+            while ((n = input.read(buffer)) > 0) {
+                builder.write(buffer, 0, n);
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "ERROR";
+        }
+    }
+
+    private static InputStream setupConnection(String url) throws IOException {
         HttpURLConnection connection = ((HttpURLConnection) new URL(url).openConnection());
         connection.setRequestMethod("GET");
         connection.setUseCaches(false);
