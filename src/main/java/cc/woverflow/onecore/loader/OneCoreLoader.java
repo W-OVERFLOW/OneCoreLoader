@@ -110,11 +110,39 @@ public class OneCoreLoader extends EssentialSetupTweaker {
                     return builder.toString();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    showErrorScreen();
-                    return "";
+                    return "ERROR";
                 }
             };
-            json = new JsonParser().parse(supplier.get()).getAsJsonObject();
+            String theJson = supplier.get();
+            if (theJson.equals("ERROR")) {
+                if (!loadLocation.exists()) {
+                    showErrorScreen();
+                } else {
+                    try {
+                        URL fileURL = loadLocation.toURI().toURL();
+                        if (!Launch.classLoader.getSources().contains(fileURL)) {
+                            Launch.classLoader.addURL(fileURL);
+                        }
+                        try {
+                            ClassLoader parent = Launch.classLoader.getClass().getClassLoader();
+                            if (!(parent instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) parent).getURLs()).contains(fileURL)) {
+                                Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                                method.setAccessible(true);
+                                method.invoke(parent, fileURL);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        Launch.classLoader.findClass("cc.woverflow.onecore.init.OneCoreInit").getDeclaredMethod("initialize").invoke(null);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                        showErrorScreen();
+                        return;
+                    }
+                }
+                return;
+            }
+            json = new JsonParser().parse(theJson).getAsJsonObject();
             if (json.has("core")) {
                 if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
                     System.out.println("Downloading / updating OneCore...");
@@ -139,21 +167,19 @@ public class OneCoreLoader extends EssentialSetupTweaker {
 
         if (json != null) {
             try {
-                if (!deobf) { //ideally, this wouldn't be needed, but compileOnly doesn't work with forge for some reason.
-                    URL fileURL = loadLocation.toURI().toURL();
-                    if (!Launch.classLoader.getSources().contains(fileURL)) {
-                        Launch.classLoader.addURL(fileURL);
+                URL fileURL = loadLocation.toURI().toURL();
+                if (!Launch.classLoader.getSources().contains(fileURL)) {
+                    Launch.classLoader.addURL(fileURL);
+                }
+                try {
+                    ClassLoader parent = Launch.classLoader.getClass().getClassLoader();
+                    if (!(parent instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) parent).getURLs()).contains(fileURL)) {
+                        Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                        method.setAccessible(true);
+                        method.invoke(parent, fileURL);
                     }
-                    try {
-                        ClassLoader parent = Launch.classLoader.getClass().getClassLoader();
-                        if (!(parent instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) parent).getURLs()).contains(fileURL)) {
-                            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-                            method.setAccessible(true);
-                            method.invoke(parent, fileURL);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             } catch (Throwable e) {
                 e.printStackTrace();
@@ -175,7 +201,7 @@ public class OneCoreLoader extends EssentialSetupTweaker {
         HttpURLConnection connection = ((HttpURLConnection) new URL(url).openConnection());
         connection.setRequestMethod("GET");
         connection.setUseCaches(false);
-        connection.addRequestProperty("User-Agent", "OneCoreLoader/1.2.1");
+        connection.addRequestProperty("User-Agent", "OneCoreLoader/1.2.2");
         connection.setReadTimeout(5000);
         connection.setConnectTimeout(5000);
         connection.setDoOutput(true);
