@@ -94,12 +94,16 @@ public class OneCoreLoader extends EssentialSetupTweaker {
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
         super.injectIntoClassLoader(classLoader);
         File loadLocation = new File(new File(new File(Launch.minecraftHome, "W-OVERFLOW"), "OneCore"), "OneCore.jar");
-        JsonObject json = null;
+        JsonObject coreJson = null;
+        JsonObject betaJson = null;
         boolean deobf = ((boolean) Launch.blackboard.getOrDefault("fml.deobfuscatedEnvironment", false));
+        String oneCoreBeta = System.getProperty("oneCoreBeta");
+
         try {
             if (!loadLocation.getParentFile().exists()) loadLocation.getParentFile().mkdirs();
-            String theJson = getJson();
-            if (theJson.equals("ERROR")) {
+            String theCoreJson = getCoreJson();
+            String theBetaJson = getBetaJson();
+            if (theCoreJson.equals("ERROR")) {
                 if (!loadLocation.exists()) {
                     showErrorScreen();
                 } else {
@@ -127,11 +131,13 @@ public class OneCoreLoader extends EssentialSetupTweaker {
                 }
                 return;
             }
-            json = new JsonParser().parse(theJson).getAsJsonObject();
-            if (json.has("core")) {
-                if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
+            coreJson = new JsonParser().parse(theCoreJson).getAsJsonObject();
+            betaJson = new JsonParser().parse(theBetaJson).getAsJsonObject();
+
+            if (coreJson.has("core")) {
+                if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(coreJson.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
                     System.out.println("Downloading / updating OneCore...");
-                    if (!download(json.get(deobf ? "core_dev" : "core").getAsString(), loadLocation)) {
+                    if (!download(coreJson.get(deobf ? "core_dev" : "core").getAsString(), loadLocation)) {
                         if (!loadLocation.exists()) {
                             showErrorScreen();
                         }
@@ -150,7 +156,7 @@ public class OneCoreLoader extends EssentialSetupTweaker {
             }
         }
 
-        if (json != null) {
+        if (coreJson != null) {
             try {
                 URL fileURL = loadLocation.toURI().toURL();
                 if (!Launch.classLoader.getSources().contains(fileURL)) {
@@ -173,8 +179,8 @@ public class OneCoreLoader extends EssentialSetupTweaker {
             }
         }
         try {
-            if (json != null) {
-                Launch.classLoader.findClass(json.getAsJsonObject("classpath").get("main").getAsString()).getDeclaredMethod("initialize").invoke(null);
+            if (coreJson != null) {
+                Launch.classLoader.findClass(coreJson.getAsJsonObject("classpath").get("main").getAsString()).getDeclaredMethod("initialize").invoke(null);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -182,8 +188,23 @@ public class OneCoreLoader extends EssentialSetupTweaker {
         }
     }
 
-    private static String getJson() {
+    private static String getCoreJson() {
         try (InputStreamReader input = new InputStreamReader(setupConnection("https://woverflow.cc/static/data/onecore.json"), Charset.defaultCharset())) {
+            StringBuilderWriter builder = new StringBuilderWriter();
+            char[] buffer = new char[4096];
+            int n;
+            while ((n = input.read(buffer)) > 0) {
+                builder.write(buffer, 0, n);
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "ERROR";
+        }
+    }
+
+    private static String getBetaJson() {
+        try(InputStreamReader input = new InputStreamReader(setupConnection("https://woverflow.cc/static/data/cc/woverflow/onecore/beta.json"), Charset.defaultCharset())) {
             StringBuilderWriter builder = new StringBuilderWriter();
             char[] buffer = new char[4096];
             int n;
