@@ -1,23 +1,21 @@
 package cc.woverflow.onecore.loader;
 
-import cc.woverflow.onecore.loader.utils.StringBuilderWriter;
+import cc.woverflow.onecore.loader.utils.InternetUtils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import gg.essential.loader.stage0.EssentialSetupTweaker;
+import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import javax.swing.*;
-import java.io.*;
+import java.io.File;
 import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.List;
 
-public class OneCoreLoader extends EssentialSetupTweaker {
+public class OneCoreLoader implements ITweaker {
 
     private static void showErrorScreen() {
         try {
@@ -44,62 +42,20 @@ public class OneCoreLoader extends EssentialSetupTweaker {
         }
     }
 
-    public static String getChecksumOfFile(String filename) {
-        try (FileInputStream inputStream = new FileInputStream(filename)) {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytesBuffer = new byte[1024];
-            int bytesRead;
+    @Override
+    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
 
-            while ((bytesRead = inputStream.read(bytesBuffer)) != -1) {
-                digest.update(bytesBuffer, 0, bytesRead);
-            }
-
-            return convertByteArrayToHexString(digest.digest());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
-
-    private static String convertByteArrayToHexString(byte[] arrayBytes) {
-        StringBuilder stringBuffer = new StringBuilder();
-        for (byte arrayByte : arrayBytes) {
-            stringBuffer.append(Integer.toString((arrayByte & 0xff) + 0x100, 16)
-                    .substring(1));
-        }
-        return stringBuffer.toString();
-    }
-
-    private boolean download(String url, File file) {
-        url = url.replace(" ", "%20");
-        try (FileOutputStream fileOut = new FileOutputStream(file)) {
-            try (BufferedInputStream in = new BufferedInputStream(setupConnection(url))) {
-                byte[] buffer = new byte[1024];
-                int read;
-                while ((read = (in.read(buffer, 0, 1024))) > 0) {
-                    fileOut.write(buffer, 0, read);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-        return true;
     }
 
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        super.injectIntoClassLoader(classLoader);
         File loadLocation = new File(new File(new File(Launch.minecraftHome, "W-OVERFLOW"), "OneCore"), "OneCore.jar");
         JsonObject json = null;
         boolean deobf = ((boolean) Launch.blackboard.getOrDefault("fml.deobfuscatedEnvironment", false));
         try {
             if (!loadLocation.getParentFile().exists()) loadLocation.getParentFile().mkdirs();
-            String theJson = getJson();
-            if (theJson.equals("ERROR")) {
+            String theJson = InternetUtils.getStringOnline("https://woverflow.cc/static/data/onecore.json");
+            if (theJson == null) {
                 if (!loadLocation.exists()) {
                     showErrorScreen();
                 } else {
@@ -129,9 +85,9 @@ public class OneCoreLoader extends EssentialSetupTweaker {
             }
             json = new JsonParser().parse(theJson).getAsJsonObject();
             if (json.has("core")) {
-                if (!loadLocation.exists() || (!getChecksumOfFile(loadLocation.getPath()).equals(json.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
+                if (!loadLocation.exists() || (!InternetUtils.getChecksumOfFile(loadLocation.getPath()).equals(json.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
                     System.out.println("Downloading / updating OneCore...");
-                    if (!download(json.get(deobf ? "core_dev" : "core").getAsString(), loadLocation)) {
+                    if (!InternetUtils.download(json.get(deobf ? "core_dev" : "core").getAsString(), loadLocation)) {
                         if (!loadLocation.exists()) {
                             showErrorScreen();
                         }
@@ -182,29 +138,13 @@ public class OneCoreLoader extends EssentialSetupTweaker {
         }
     }
 
-    private static String getJson() {
-        try (InputStreamReader input = new InputStreamReader(setupConnection("https://woverflow.cc/static/data/onecore.json"), Charset.defaultCharset())) {
-            StringBuilderWriter builder = new StringBuilderWriter();
-            char[] buffer = new char[4096];
-            int n;
-            while ((n = input.read(buffer)) > 0) {
-                builder.write(buffer, 0, n);
-            }
-            return builder.toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "ERROR";
-        }
+    @Override
+    public String getLaunchTarget() {
+        return null;
     }
 
-    private static InputStream setupConnection(String url) throws IOException {
-        HttpURLConnection connection = ((HttpURLConnection) new URL(url).openConnection());
-        connection.setRequestMethod("GET");
-        connection.setUseCaches(false);
-        connection.addRequestProperty("User-Agent", "OneCoreLoader/1.2.2");
-        connection.setReadTimeout(5000);
-        connection.setConnectTimeout(5000);
-        connection.setDoOutput(true);
-        return connection.getInputStream();
+    @Override
+    public String[] getLaunchArguments() {
+        return new String[0];
     }
 }
