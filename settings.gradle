@@ -1,18 +1,9 @@
 pluginManagement {
     repositories {
-        mavenCentral()
-        gradlePluginPortal()
-
-        // Add the Forge Repository (ForgeGradle fetches most of its stuff from here)
+        //We fetch all our plugins from the main W-OVERFLOW repository as it mirrors all the other repos.
         maven {
-            name = "Forge"
-            url = "https://maven.minecraftforge.net"
-        }
-
-        // Add the Jitpack Repository (We fetch ForgeGradle from this)
-        maven {
-            name = "Jitpack"
-            url = "https://jitpack.io/"
+            name = "W-OVERFLOW"
+            url = "https://repo.woverflow.cc/"
         }
     }
     resolutionStrategy {

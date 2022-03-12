@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
+import io.sentry.Sentry;
 
 import javax.swing.*;
 import java.io.File;
@@ -16,12 +17,19 @@ import java.util.Arrays;
 import java.util.List;
 
 public class OneCoreLoader implements ITweaker {
+    public OneCoreLoader() {
+        Sentry.init(options -> {
+            options.setDsn("https://4477f7a4c4c8432f9f757b2b1443de72@o1071772.ingest.sentry.io/6256057");
+            options.setTracesSampleRate(1.0);
+        });
+    }
 
     private static void showErrorScreen() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
+            Sentry.captureException(e);
         }
 
         JOptionPane.showMessageDialog(
@@ -38,6 +46,7 @@ public class OneCoreLoader implements ITweaker {
             exit.invoke(null, 1);
         } catch (Exception e) {
             e.printStackTrace();
+            Sentry.captureException(e);
             System.exit(1);
         }
     }
@@ -73,10 +82,12 @@ public class OneCoreLoader implements ITweaker {
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
+                            Sentry.captureException(e);
                         }
                         Launch.classLoader.findClass("cc.woverflow.onecore.init.OneCoreInit").getDeclaredMethod("initialize").invoke(null);
                     } catch (Throwable e) {
                         e.printStackTrace();
+                        Sentry.captureException(e);
                         showErrorScreen();
                         return;
                     }
@@ -101,6 +112,7 @@ public class OneCoreLoader implements ITweaker {
             }
         } catch (Throwable e) {
             e.printStackTrace();
+            Sentry.captureException(e);
             if (!loadLocation.exists()) {
                 showErrorScreen();
             }
@@ -120,10 +132,12 @@ public class OneCoreLoader implements ITweaker {
                         method.invoke(parent, fileURL);
                     }
                 } catch (Exception e) {
+                    Sentry.captureException(e);
                     e.printStackTrace();
                 }
             } catch (Throwable e) {
                 e.printStackTrace();
+                Sentry.captureException(e);
                 showErrorScreen();
                 return;
             }
@@ -134,6 +148,7 @@ public class OneCoreLoader implements ITweaker {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            Sentry.captureException(e);
             showErrorScreen();
         }
     }
