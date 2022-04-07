@@ -14,6 +14,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class OneCoreLoader implements ITweaker {
 
@@ -28,7 +29,7 @@ public class OneCoreLoader implements ITweaker {
                 null,
                 "OneCore has failed to download!\n" +
                         "This may be because the servers are down.\n" +
-                        "For more information, please join our discord server: https://woverflow.cc/discord\n" +
+                        "For more information, please join our discord server (https://woverflow.cc/discord) and go to #support-bug-report!\n" +
                         "or try again later.",
                 "OneCore has failed!", JOptionPane.ERROR_MESSAGE
         );
@@ -49,88 +50,103 @@ public class OneCoreLoader implements ITweaker {
 
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        File loadLocation = new File(new File(new File(Launch.minecraftHome, "W-OVERFLOW"), "OneCore"), "OneCore.jar");
-        JsonObject json = null;
-        boolean deobf = ((boolean) Launch.blackboard.getOrDefault("fml.deobfuscatedEnvironment", false));
         try {
-            if (!loadLocation.getParentFile().exists()) loadLocation.getParentFile().mkdirs();
-            String theJson = InternetUtils.getStringOnline("https://woverflow.cc/static/data/onecore.json");
-            if (theJson == null) {
-                if (!loadLocation.exists()) {
-                    showErrorScreen();
-                } else {
-                    try {
-                        URL fileURL = loadLocation.toURI().toURL();
-                        if (!Launch.classLoader.getSources().contains(fileURL)) {
-                            Launch.classLoader.addURL(fileURL);
-                        }
-                        try {
-                            ClassLoader parent = Launch.classLoader.getClass().getClassLoader();
-                            if (!(parent instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) parent).getURLs()).contains(fileURL)) {
-                                Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-                                method.setAccessible(true);
-                                method.invoke(parent, fileURL);
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        Launch.classLoader.findClass("cc.woverflow.onecore.init.OneCoreInit").getDeclaredMethod("initialize").invoke(null);
-                    } catch (Throwable e) {
-                        e.printStackTrace();
-                        showErrorScreen();
-                        return;
-                    }
-                }
-                return;
-            }
-            json = new JsonParser().parse(theJson).getAsJsonObject();
-            if (json.has("core")) {
-                if (!loadLocation.exists() || (!InternetUtils.getChecksumOfFile(loadLocation.getPath()).equals(json.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
-                    System.out.println("Downloading / updating OneCore...");
-                    if (!InternetUtils.download(json.get(deobf ? "core_dev" : "core").getAsString(), loadLocation)) {
-                        if (!loadLocation.exists()) {
-                            showErrorScreen();
-                        }
-                    }
-                }
-            } else {
-                // oh
-                if (!loadLocation.exists()) {
-                    showErrorScreen();
-                }
-            }
-        } catch (Throwable e) {
-            e.printStackTrace();
-            if (!loadLocation.exists()) {
-                showErrorScreen();
-            }
-        }
-
-        if (json != null) {
+            String version;
             try {
-                URL fileURL = loadLocation.toURI().toURL();
-                if (!Launch.classLoader.getSources().contains(fileURL)) {
-                    Launch.classLoader.addURL(fileURL);
-                }
-                try {
-                    ClassLoader parent = Launch.classLoader.getClass().getClassLoader();
-                    if (!(parent instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) parent).getURLs()).contains(fileURL)) {
-                        Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-                        method.setAccessible(true);
-                        method.invoke(parent, fileURL);
+                version = (String) ((Object[]) Class.forName("net.minecraftforge.fml.relauncher.FMLInjectionData").getDeclaredMethod("data").invoke(null))[4];
+            } catch (Exception e) {
+                e.printStackTrace();
+                //noinspection unchecked
+                Map<String, String> launchArgs = (Map<String, String>)Launch.blackboard.get("launchArgs");
+                version = launchArgs.get("--version");
+            }
+            File loadLocation = new File(new File(new File(Launch.minecraftHome, "W-OVERFLOW"), "OneCore"), "OneCore-" + version + "-forge.jar");
+            JsonObject json = null;
+            System.out.println("OneCore has detected the version: " + version + ". If this is wrong, please report this to https://woverflow.cc/discord");
+            boolean deobf = ((boolean) Launch.blackboard.getOrDefault("fml.deobfuscatedEnvironment", false));
+            try {
+                if (!loadLocation.getParentFile().exists()) loadLocation.getParentFile().mkdirs();
+                String theJson = InternetUtils.getStringOnline("https://woverflow.cc/static/data/onecore-" + version + "-forge.json");
+                if (theJson == null) {
+                    if (!loadLocation.exists()) {
+                        showErrorScreen();
+                    } else {
+                        try {
+                            URL fileURL = loadLocation.toURI().toURL();
+                            if (!Launch.classLoader.getSources().contains(fileURL)) {
+                                Launch.classLoader.addURL(fileURL);
+                            }
+                            try {
+                                ClassLoader parent = Launch.classLoader.getClass().getClassLoader();
+                                if (!(parent instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) parent).getURLs()).contains(fileURL)) {
+                                    Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                                    method.setAccessible(true);
+                                    method.invoke(parent, fileURL);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            Launch.classLoader.findClass("cc.woverflow.onecore.init.OneCoreInit").getDeclaredMethod("initialize").invoke(null);
+                        } catch (Throwable e) {
+                            e.printStackTrace();
+                            showErrorScreen();
+                            return;
+                        }
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    return;
+                }
+                json = new JsonParser().parse(theJson).getAsJsonObject();
+                if (json.has("core")) {
+                    if (!loadLocation.exists() || (!InternetUtils.getChecksumOfFile(loadLocation.getPath()).equals(json.get(deobf ? "checksum_core_dev" : "checksum_core").getAsString()))) {
+                        System.out.println("Downloading / updating OneCore...");
+                        if (!InternetUtils.download(json.get(deobf ? "core_dev" : "core").getAsString(), loadLocation)) {
+                            if (!loadLocation.exists()) {
+                                showErrorScreen();
+                            }
+                        }
+                    }
+                } else {
+                    // oh
+                    if (!loadLocation.exists()) {
+                        showErrorScreen();
+                    }
                 }
             } catch (Throwable e) {
                 e.printStackTrace();
-                showErrorScreen();
-                return;
+                if (!loadLocation.exists()) {
+                    showErrorScreen();
+                }
             }
-        }
-        try {
+
             if (json != null) {
-                Launch.classLoader.findClass(json.getAsJsonObject("classpath").get("main").getAsString()).getDeclaredMethod("initialize").invoke(null);
+                try {
+                    URL fileURL = loadLocation.toURI().toURL();
+                    if (!Launch.classLoader.getSources().contains(fileURL)) {
+                        Launch.classLoader.addURL(fileURL);
+                    }
+                    try {
+                        ClassLoader parent = Launch.classLoader.getClass().getClassLoader();
+                        if (!(parent instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) parent).getURLs()).contains(fileURL)) {
+                            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                            method.setAccessible(true);
+                            method.invoke(parent, fileURL);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                    showErrorScreen();
+                    return;
+                }
+            }
+            try {
+                if (json != null) {
+                    Launch.classLoader.findClass(json.getAsJsonObject("classpath").get("main").getAsString()).getDeclaredMethod("initialize").invoke(null);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                showErrorScreen();
             }
         } catch (Exception e) {
             e.printStackTrace();
